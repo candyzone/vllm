@@ -267,6 +267,7 @@ class QWenLMHeadModel(nn.Module):
         return next_tokens
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
+        torch.cuda.cudart().cudaProfilerStart()
         stacked_params_mapping = [
             # (param_name, shard_name, shard_id)
             ("gate_up_proj", "w2", 0),
@@ -295,3 +296,4 @@ class QWenLMHeadModel(nn.Module):
                 weight_loader = getattr(param, "weight_loader",
                                         default_weight_loader)
                 weight_loader(param, loaded_weight)
+        torch.cuda.cudart().cudaProfilerStop()
