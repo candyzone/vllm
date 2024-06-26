@@ -29,6 +29,8 @@ from vllm.model_executor.model_loader.weight_utils import default_weight_loader
 from vllm.model_executor.sampling_metadata import SamplingMetadata
 from vllm.sequence import SamplerOutput
 
+from vllm.logger import init_logger
+logger = init_logger(__name__)
 
 class QWenMLP(nn.Module):
 
@@ -237,6 +239,7 @@ class QWenLMHeadModel(nn.Module):
         self.lm_head = ParallelLMHead(config.vocab_size, config.hidden_size)
         self.logits_processor = LogitsProcessor(config.vocab_size)
         self.sampler = Sampler()
+        logger.info("\033[91m {} \033[0m".format('QWenLMHeadModel __init__ done'))
 
     def forward(
         self,

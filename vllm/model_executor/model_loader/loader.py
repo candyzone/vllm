@@ -181,9 +181,11 @@ class DefaultModelLoader(BaseModelLoader):
             allow_patterns += ["*.pt"]
 
         if not is_local:
+            logger.info("\033[91m [download] model start: {}\033[0m".format(self.load_config.download_dir))
             hf_folder = download_weights_from_hf(model_name_or_path,
                                                  self.load_config.download_dir,
                                                  allow_patterns, revision)
+            logger.info("\033[91m [download] model done: {}\033[0m".format(hf_folder))
         else:
             hf_folder = model_name_or_path
 
@@ -246,6 +248,7 @@ class DefaultModelLoader(BaseModelLoader):
                 model = _initialize_model(model_config, self.load_config,
                                           lora_config, vision_language_config,
                                           cache_config)
+            logger.info("\033[91m [loading] model start {} \033[0m".format(model_config))
             model.load_weights(
                 self._get_weights_iterator(model_config.model,
                                            model_config.revision,
@@ -262,6 +265,7 @@ class DefaultModelLoader(BaseModelLoader):
                 # to use quant_method.
                 if hasattr(module, "process_weights_after_loading"):
                     module.process_weights_after_loading()
+        logger.info("\033[91m [loading] model done {} \033[0m".format(model_config.model))
         return model.eval()
 
 
@@ -798,5 +802,7 @@ def get_model_loader(load_config: LoadConfig) -> BaseModelLoader:
 
     if load_config.load_format == LoadFormat.BITSANDBYTES:
         return BitsAndBytesModelLoader(load_config)
+
+    logger.info("\033[91m Using default model loader {}\033[0m".format(load_config.load_format))
 
     return DefaultModelLoader(load_config)
