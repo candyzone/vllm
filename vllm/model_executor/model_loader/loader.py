@@ -222,7 +222,12 @@ class DefaultModelLoader(BaseModelLoader):
     def _get_weights_iterator(
         self, model_name_or_path: str, revision: Optional[str],
         fall_back_to_pt: bool
-    ) -> Generator[Tuple[str, torch.Tensor], None, None]:
+    # origin
+    # ) -> Generator[Tuple[str, torch.Tensor], None, None]:
+    # by Tensor restore
+    # ) -> List[Tuple[str, torch.Tensor]]:
+    # bulk restore
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Size]]:
         """Get an iterator for the model weights based on the load format."""
         hf_folder, hf_weights_files, use_safetensors = self._prepare_weights(
             model_name_or_path, revision, fall_back_to_pt)

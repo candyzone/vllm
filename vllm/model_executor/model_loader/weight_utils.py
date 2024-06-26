@@ -6,7 +6,7 @@ import json
 import os
 import tempfile
 from collections import defaultdict
-from typing import Any, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Generator, Iterable, List, Optional, Tuple, Dict
 
 import filelock
 import huggingface_hub.constants
@@ -352,13 +352,45 @@ def np_cache_weights_iterator(
 
 def safetensors_weights_iterator(
     hf_weights_files: List[str]
-) -> Generator[Tuple[str, torch.Tensor], None, None]:
+# origin
+# ) -> Generator[Tuple[str, torch.Tensor], None, None]:
+# by Tensor restore
+# ) -> List[Tuple[str, torch.Tensor]]:
+# bulk restore
+) -> Tuple[torch.Tensor, Dict[str, torch.Size]]:
     """Iterate over the weights in the model safetensor files."""
+    # origin
+    # for st_file in hf_weights_files:
+    #     with safe_open(st_file, framework="pt") as f:
+    #         for name in f.keys():  # noqa: SIM118
+    #             param = f.get_tensor(name)
+    #             yield name, param
+
+    # by Tensor restore
+    # ret = []
+    # logger.info("start reading parameter from Disk.")
+    # for st_file in hf_weights_files:
+    #     with safe_open(st_file, framework="pt") as f:
+    #         for name in f.keys():  # noqa: SIM118
+    #             param = f.get_tensor(name)
+    #             ret.append((name, param.pin_memory()))
+    # logger.info("reading parameter to Memory.")
+    # return ret
+
+    # bulk restore
+    tensor_list = []
+    meta = {} # name - para. shape
+    logger.info("start reading parameter from Disk.")
     for st_file in hf_weights_files:
         with safe_open(st_file, framework="pt") as f:
             for name in f.keys():  # noqa: SIM118
                 param = f.get_tensor(name)
-                yield name, param
+                tensor_list.append(param.reshape(-1))
+                meta[name] = param.size()
+    bluk_tensor = torch.cat(tensor_list)
+    pinned_bluk_tensor = bluk_tensor.pin_memory()
+    logger.info("reading parameter to Memory.")
+    return pinned_bluk_tensor, meta
 
 
 def pt_weights_iterator(

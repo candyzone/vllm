@@ -266,7 +266,12 @@ class QWenLMHeadModel(nn.Module):
         next_tokens = self.sampler(logits, sampling_metadata)
         return next_tokens
 
-    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
+    # origin
+    # def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
+    # by Tensor restore
+    # def load_weights(self, weights: List[Tuple[str, torch.Tensor]]):
+    # bulk restore
+    def load_weights(self, weights_and_meta: Tuple[torch.Tensor, Dict[str, torch.Size]]):
         torch.cuda.cudart().cudaProfilerStart()
         stacked_params_mapping = [
             # (param_name, shard_name, shard_id)
@@ -274,7 +279,28 @@ class QWenLMHeadModel(nn.Module):
             ("gate_up_proj", "w1", 1),
         ]
         params_dict = dict(self.named_parameters())
-        for name, loaded_weight in weights:
+        # origin
+        # for name, loaded_weight in weights:
+        # by Tensor restore
+        # for name, loaded_weight in weights:
+        # bulk restore
+        logger.info("\033[91m bulk weights copy_ start: {} \033[0m".format('weights'))
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        cat_weights = torch.empty_like(weights_and_meta[0], device=device)
+        cat_weights.data.copy_(weights_and_meta[0])
+        logger.info("\033[91m bulk weights copy_ done: {} \033[0m".format(cat_weights.size()))
+        shapes = []
+        names = []
+        numel = []
+        for name in weights_and_meta[1]:
+            size = weights_and_meta[1][name]
+            numel.append(size.numel())
+            names.append(name)
+            shapes.append(size)
+        weights = cat_weights.split(numel)
+        for name, shape, loaded_weight in zip(names, shapes, weights):
+            loaded_weight = loaded_weight.reshape(shape)
+
             if "rotary_emb.inv_freq" in name:
                 continue
             for (param_name, weight_name, shard_id) in stacked_params_mapping:
