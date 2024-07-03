@@ -155,7 +155,7 @@ class Worker(WorkerBase):
 
         # Execute a forward pass with dummy inputs to profile the memory usage
         # of the model.
-        #self.model_runner.profile_run()
+        self.model_runner.profile_run()
 
         # Calculate the number of blocks that can be allocated with the
         # profiled peak memory.
@@ -163,8 +163,7 @@ class Worker(WorkerBase):
         free_gpu_memory, total_gpu_memory = torch.cuda.mem_get_info()
         # NOTE(woosuk): Here we assume that the other processes using the same
         # GPU did not change their memory usage during the profiling.
-        #peak_memory = self.init_gpu_memory - free_gpu_memory
-        peak_memory = 32272143870
+        peak_memory = self.init_gpu_memory - free_gpu_memory
         print("peak_memory is {}.".format(peak_memory))
         assert peak_memory > 0, (
             "Error in memory profiling. This happens when the GPU memory was "
