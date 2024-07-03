@@ -19,7 +19,7 @@ from vllm.lora.layers import LoRAMapping
 from vllm.lora.request import LoRARequest
 from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
 from vllm.model_executor import SamplingMetadata
-from vllm.model_executor.model_loader import get_model
+from vllm.model_executor.model_loader import get_model, load_weight
 from vllm.multimodal import MULTIMODAL_REGISTRY
 from vllm.sampling_params import SamplingParams
 from vllm.sequence import SamplerOutput, SequenceData, SequenceGroupMetadata
@@ -207,6 +207,90 @@ class ModelRunner:
                     "Using FP8 KV cache but no scaling factors "
                     "provided. Defaulting to scaling factors of 1.0. "
                     "This may lead to less accurate results!")
+
+    def init_model(self) -> None:
+        with CudaMemoryProfiler() as m:
+            self.model = get_model(
+                model_config=self.model_config,
+                device_config=self.device_config,
+                load_config=self.load_config,
+                lora_config=self.lora_config,
+                vision_language_config=self.vision_language_config,
+                parallel_config=self.parallel_config,
+                scheduler_config=self.scheduler_config,
+                cache_config=self.cache_config,
+            )
+
+        self.model_memory_usage = m.consumed_memory
+        logger.info("Loading model weights took %.4f GB",
+                    self.model_memory_usage / float(2**30))
+
+        if self.lora_config:
+            assert hasattr(self.model, "supported_lora_modules"
+                           ) and self.model.supported_lora_modules, (
+                               "Model does not support LoRA")
+            assert hasattr(
+                self.model,
+                "embedding_modules"), "Model does not have embedding_modules"
+            assert hasattr(self.model, "embedding_padding_modules"
+                           ), "Model does not have embedding_padding_modules"
+            self.lora_manager = LRUCacheWorkerLoRAManager(
+                self.scheduler_config.max_num_seqs,
+                self.scheduler_config.max_num_batched_tokens,
+                self.vocab_size,
+                self.lora_config,
+                self.device,
+                self.model.embedding_modules,
+                self.model.embedding_padding_modules,
+                max_position_embeddings=self.model.config.
+                max_position_embeddings,
+            )
+            self.model = self.lora_manager.create_lora_manager(self.model)
+
+        if self.kv_cache_dtype == "fp8" and is_hip():
+            # Currently only ROCm accepts kv-cache scaling factors
+            # via quantization_param_path and this will be deprecated
+            # in the future.
+            if self.model_config.quantization_param_path is not None:
+                if callable(getattr(self.model, "load_kv_cache_scales", None)):
+                    warnings.warn(
+                        "Loading kv cache scaling factor from JSON is "
+                        "deprecated and will be removed. Please include "
+                        "kv cache scaling factors in the model checkpoint.",
+                        FutureWarning,
+                        stacklevel=2)
+                    self.model.load_kv_cache_scales(
+                        self.model_config.quantization_param_path)
+                    logger.info("Loaded KV cache scaling factors from %s",
+                                self.model_config.quantization_param_path)
+                else:
+                    raise RuntimeError(
+                        "Using FP8 KV cache and scaling factors provided but "
+                        "model %s does not support loading scaling factors.",
+                        self.model.__class__)
+            else:
+                logger.warning(
+                    "Using FP8 KV cache but no scaling factors "
+                    "provided. Defaulting to scaling factors of 1.0. "
+                    "This may lead to less accurate results!")
+
+    def load_weight(self) -> None:
+        with CudaMemoryProfiler() as m:
+            load_weight(
+                model_config=self.model_config,
+                device_config=self.device_config,
+                load_config=self.load_config,
+                lora_config=self.lora_config,
+                vision_language_config=self.vision_language_config,
+                parallel_config=self.parallel_config,
+                scheduler_config=self.scheduler_config,
+                cache_config=self.cache_config,
+            )
+
+        self.model_memory_usage = m.consumed_memory
+        logger.info("Loading model weights took %.4f GB",
+                    self.model_memory_usage / float(2**30))
+
 
     def save_sharded_state(
         self,

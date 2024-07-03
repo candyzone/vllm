@@ -21,7 +21,8 @@ class GPUExecutor(ExecutorBase):
 
         self.driver_worker = self._create_worker()
         self.driver_worker.init_device()
-        self.driver_worker.load_model()
+        # self.driver_worker.load_model()
+        self.driver_worker.model_runner.init_model()
 
     def _get_worker_kwargs(
             self,

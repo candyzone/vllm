@@ -281,6 +281,53 @@ class DefaultModelLoader(BaseModelLoader):
         logger.info("\033[91m [loading] model done {} \033[0m".format(model_config.model))
         return model.eval()
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("DefaultModelLoader.PH1.init_model")
+    def init_model(self, *, model_config: ModelConfig,
+                   device_config: DeviceConfig,
+                   lora_config: Optional[LoRAConfig],
+                   vision_language_config: Optional[VisionLanguageConfig],
+                   parallel_config: ParallelConfig,
+                   scheduler_config: SchedulerConfig,
+                   cache_config: CacheConfig) -> nn.Module:
+        with set_default_torch_dtype(model_config.dtype):
+            with torch.device(device_config.device):
+                model = _initialize_model(model_config, self.load_config,
+                                          lora_config, vision_language_config,
+                                          cache_config)
+                self.model = model
+        return model.eval()
+
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("DefaultModelLoader.PH2.load_weight")
+    def load_weight(self, *, model_config: ModelConfig,
+                   device_config: DeviceConfig,
+                   lora_config: Optional[LoRAConfig],
+                   vision_language_config: Optional[VisionLanguageConfig],
+                   parallel_config: ParallelConfig,
+                   scheduler_config: SchedulerConfig,
+                   cache_config: CacheConfig) -> nn.Module:
+        with set_default_torch_dtype(model_config.dtype):
+            logger.info("\033[91m [loading] model start {} \033[0m".format(model_config))
+            self.model.load_weights(
+                self._get_weights_iterator(model_config.model,
+                                           model_config.revision,
+                                           fall_back_to_pt=getattr(
+                                               self.model,
+                                               "fall_back_to_pt_during_load",
+                                               True)), )
+
+            for _, module in self.model.named_modules():
+                quant_method = getattr(module, "quant_method", None)
+                if quant_method is not None:
+                    quant_method.process_weights_after_loading(module)
+                # FIXME: Remove this after Mixtral is updated
+                # to use quant_method.
+                if hasattr(module, "process_weights_after_loading"):
+                    module.process_weights_after_loading()
+        logger.info("\033[91m [loading] model done {} \033[0m".format(model_config.model))
+        return
+
 
 class DummyModelLoader(BaseModelLoader):
     """Model loader that will set model weights to random values."""

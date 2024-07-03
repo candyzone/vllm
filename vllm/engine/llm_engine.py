@@ -237,6 +237,8 @@ class LLMEngine:
         if not self.model_config.embedding_mode:
             self._initialize_kv_caches()
 
+        self.model_executor.driver_worker.model_runner.load_weight()
+
         # If usage stat is enabled, collect relevant info.
         if is_usage_stats_enabled():
             from vllm.model_executor.model_loader import (
