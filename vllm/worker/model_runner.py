@@ -646,6 +646,8 @@ class ModelRunner:
             num_prefills=num_prefills,
         )
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("ModelRunner.prepare_input_tensors")
     def prepare_input_tensors(
         self,
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
@@ -713,6 +715,8 @@ class ModelRunner:
                 sampling_metadata, lora_requests, lora_mapping,
                 multi_modal_kwargs)
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("ModelRunner.execute_model")
     @torch.inference_mode()
     def execute_model(
         self,
@@ -758,6 +762,8 @@ class ModelRunner:
 
         return output
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("ModelRunner.profile_run")
     @torch.inference_mode()
     def profile_run(self) -> None:
         # Enable top-k sampling to reflect the accurate memory usage.

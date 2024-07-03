@@ -350,6 +350,8 @@ def np_cache_weights_iterator(
         yield name, torch.from_numpy(param)
 
 
+from vllm.spec_decode.util import nvtx_range
+@nvtx_range("weight_utils.safetensors_read^cat^pined")
 def safetensors_weights_iterator(
     hf_weights_files: List[str]
 # origin

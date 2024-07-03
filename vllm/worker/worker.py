@@ -117,6 +117,8 @@ class Worker(WorkerBase):
         # Set random seed.
         set_random_seed(self.model_config.seed)
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("Worker.load_model")
     def load_model(self):
         self.model_runner.load_model()
 
@@ -132,6 +134,8 @@ class Worker(WorkerBase):
             max_size=max_size,
         )
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("Worker.determine_num_available_blocks(profile_run)")
     @torch.inference_mode()
     def determine_num_available_blocks(self) -> Tuple[int, int]:
         """Profiles the peak memory usage of the model to determine how many
@@ -196,12 +200,15 @@ class Worker(WorkerBase):
         self._init_cache_engine()
         self._warm_up_model()
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("Worker._init_cache_engine")
     def _init_cache_engine(self):
         assert self.cache_config.num_gpu_blocks is not None
         self.cache_engine = CacheEngine(self.cache_config, self.model_config,
                                         self.parallel_config)
         self.gpu_cache = self.cache_engine.gpu_cache
 
+    @nvtx_range("Worker._warm_up_model")
     def _warm_up_model(self) -> None:
         if not self.model_config.enforce_eager:
             self.model_runner.capture_model(self.gpu_cache)

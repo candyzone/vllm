@@ -494,7 +494,9 @@ class CudaMemoryProfiler:
         self.consumed_memory = self.final_memory - self.initial_memory
 
         # Force garbage collection
+        torch.cuda.nvtx.range_push("CudaMemoryProfiler.__exit__")
         gc.collect()
+        torch.cuda.nvtx.range_pop()
 
 
 def str_to_int_tuple(s: str) -> Tuple[int, ...]:

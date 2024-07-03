@@ -86,6 +86,8 @@ def _get_model_initialization_kwargs(
     return extra_kwargs
 
 
+from vllm.spec_decode.util import nvtx_range
+@nvtx_range("DefaultModelLoader._initialize_model")
 def _initialize_model(model_config: ModelConfig, load_config: LoadConfig,
                       lora_config: Optional[LoRAConfig],
                       vision_language_config: Optional[VisionLanguageConfig],
@@ -152,6 +154,8 @@ class DefaultModelLoader(BaseModelLoader):
             return model_path
         return None
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("DefaultModelLoader._prepare_weights (download)")
     def _prepare_weights(self, model_name_or_path: str,
                          revision: Optional[str],
                          fall_back_to_pt: bool) -> Tuple[str, List[str], bool]:
@@ -219,6 +223,8 @@ class DefaultModelLoader(BaseModelLoader):
 
         return hf_folder, hf_weights_files, use_safetensors
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("DefaultModelLoader._get_weights_iterator")
     def _get_weights_iterator(
         self, model_name_or_path: str, revision: Optional[str],
         fall_back_to_pt: bool
@@ -241,6 +247,8 @@ class DefaultModelLoader(BaseModelLoader):
             return safetensors_weights_iterator(hf_weights_files)
         return pt_weights_iterator(hf_weights_files)
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("DefaultModelLoader.load_model")
     def load_model(self, *, model_config: ModelConfig,
                    device_config: DeviceConfig,
                    lora_config: Optional[LoRAConfig],

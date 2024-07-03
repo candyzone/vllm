@@ -142,6 +142,8 @@ class LLMEngine:
 
     tokenizer: Optional[BaseTokenizerGroup]
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("LLMEngine._init_")
     def __init__(
         self,
         model_config: ModelConfig,
@@ -303,6 +305,8 @@ class LLMEngine:
                 ),
             ))
 
+    from vllm.spec_decode.util import nvtx_range
+    @nvtx_range("LLMEngine._initialize_kv_caches")
     def _initialize_kv_caches(self) -> None:
         """Initialize the KV cache in the worker(s).
 
