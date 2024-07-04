@@ -48,6 +48,11 @@ class RMSNorm(CustomOp):
         x: torch.Tensor,
         residual: Optional[torch.Tensor] = None,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        while not getattr(self.weight, 'is_initialized', False):
+            # not initialized
+            import time
+            time.sleep(1/1000.0)
+
         from vllm import _custom_ops as ops
 
         if residual is not None:

@@ -209,6 +209,7 @@ class QWenModel(nn.Module):
         kv_caches: List[torch.Tensor],
         attn_metadata: AttentionMetadata,
     ) -> torch.Tensor:
+        print("attn_metadata", attn_metadata.num_prefills)
         hidden_states = self.wte(input_ids)
         residual = None
         for i in range(len(self.h)):
@@ -225,6 +226,8 @@ class QWenModel(nn.Module):
 
 
 class QWenLMHeadModel(nn.Module):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    stream1 = torch.cuda.Stream(device=device)
 
     def __init__(
         self,
@@ -284,11 +287,14 @@ class QWenLMHeadModel(nn.Module):
         # by Tensor restore
         # for name, loaded_weight in weights:
         # bulk restore
-        logger.info("\033[91m bulk weights copy_ start: {} \033[0m".format('weights'))
+        #logger.info("\033[91m bulk weights copy_ start: {} \033[0m".format('weights'))
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         cat_weights = torch.empty_like(weights_and_meta[0], device=device)
-        cat_weights.data.copy_(weights_and_meta[0])
-        logger.info("\033[91m bulk weights copy_ done: {} \033[0m".format(cat_weights.size()))
+        with torch.cuda.stream(QWenLMHeadModel.stream1):
+          cat_weights.data.copy_(weights_and_meta[0])
+
+        #logger.info("\033[91m bulk weights copy_ done: {} \033[0m".format(cat_weights.size()))
         shapes = []
         names = []
         numel = []
@@ -313,6 +319,7 @@ class QWenLMHeadModel(nn.Module):
                 param = params_dict[name]
                 weight_loader = param.weight_loader
                 weight_loader(param, loaded_weight, shard_id)
+                param.is_initialized = True
                 break
             else:
                 # Skip loading extra bias for GPTQ models.
@@ -322,4 +329,5 @@ class QWenLMHeadModel(nn.Module):
                 weight_loader = getattr(param, "weight_loader",
                                         default_weight_loader)
                 weight_loader(param, loaded_weight)
+                param.is_initialized = True
         #torch.cuda.cudart().cudaProfilerStop()

@@ -275,21 +275,16 @@ class ModelRunner:
                     "This may lead to less accurate results!")
 
     def load_weight(self) -> None:
-        with CudaMemoryProfiler() as m:
-            load_weight(
-                model_config=self.model_config,
-                device_config=self.device_config,
-                load_config=self.load_config,
-                lora_config=self.lora_config,
-                vision_language_config=self.vision_language_config,
-                parallel_config=self.parallel_config,
-                scheduler_config=self.scheduler_config,
-                cache_config=self.cache_config,
-            )
-
-        self.model_memory_usage = m.consumed_memory
-        logger.info("Loading model weights took %.4f GB",
-                    self.model_memory_usage / float(2**30))
+        load_weight(
+            model_config=self.model_config,
+            device_config=self.device_config,
+            load_config=self.load_config,
+            lora_config=self.lora_config,
+            vision_language_config=self.vision_language_config,
+            parallel_config=self.parallel_config,
+            scheduler_config=self.scheduler_config,
+            cache_config=self.cache_config,
+        )
 
 
     def save_sharded_state(
@@ -920,6 +915,8 @@ class ModelRunner:
         # Run the model with the dummy inputs.
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [None] * num_layers
+        for _, para in self.model.named_parameters():
+            para.is_initialized = True
         self.execute_model(seqs, kv_caches)
         torch.cuda.synchronize()
         return

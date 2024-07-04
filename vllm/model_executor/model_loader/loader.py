@@ -233,7 +233,7 @@ class DefaultModelLoader(BaseModelLoader):
     # by Tensor restore
     # ) -> List[Tuple[str, torch.Tensor]]:
     # bulk restore
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Size]]:
+    ) -> List[Tuple[torch.Tensor, Dict[str, torch.Size]]]:
         """Get an iterator for the model weights based on the load format."""
         hf_folder, hf_weights_files, use_safetensors = self._prepare_weights(
             model_name_or_path, revision, fall_back_to_pt)
@@ -296,6 +296,9 @@ class DefaultModelLoader(BaseModelLoader):
                                           lora_config, vision_language_config,
                                           cache_config)
                 self.model = model
+                #print("=============", dict(self.model.named_parameters()))
+                for _, para in self.model.named_parameters():
+                    para.is_initialized = False
         return model.eval()
 
     from vllm.spec_decode.util import nvtx_range
@@ -309,13 +312,8 @@ class DefaultModelLoader(BaseModelLoader):
                    cache_config: CacheConfig) -> nn.Module:
         with set_default_torch_dtype(model_config.dtype):
             logger.info("\033[91m [loading] model start {} \033[0m".format(model_config))
-            self.model.load_weights(
-                self._get_weights_iterator(model_config.model,
-                                           model_config.revision,
-                                           fall_back_to_pt=getattr(
-                                               self.model,
-                                               "fall_back_to_pt_during_load",
-                                               True)), )
+            for x in self.weight:
+              self.model.load_weights(x)
 
             for _, module in self.model.named_modules():
                 quant_method = getattr(module, "quant_method", None)

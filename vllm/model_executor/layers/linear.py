@@ -291,6 +291,11 @@ class ColumnParallelLinear(LinearBase):
         param_data.copy_(loaded_weight)
 
     def forward(self, input_):
+        while not getattr(self.weight, 'is_initialized', False):
+            # not initialized
+            import time
+            time.sleep(1/1000.0)
+
         bias = self.bias if not self.skip_bias_add else None
 
         # Matrix multiply.
@@ -790,6 +795,11 @@ class RowParallelLinear(LinearBase):
         param_data.copy_(loaded_weight)
 
     def forward(self, input_):
+        while not getattr(self.weight, 'is_initialized', False):
+            # not initialized
+            import time
+            time.sleep(1/1000.0)
+
         # Set up backprop all-reduce.
         if self.input_is_parallel:
             input_parallel = input_

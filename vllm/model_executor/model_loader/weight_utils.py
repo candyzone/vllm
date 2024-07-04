@@ -359,7 +359,7 @@ def safetensors_weights_iterator(
 # by Tensor restore
 # ) -> List[Tuple[str, torch.Tensor]]:
 # bulk restore
-) -> Tuple[torch.Tensor, Dict[str, torch.Size]]:
+) -> List[Tuple[torch.Tensor, Dict[str, torch.Size]]]:
     """Iterate over the weights in the model safetensor files."""
     # origin
     # for st_file in hf_weights_files:
@@ -379,20 +379,35 @@ def safetensors_weights_iterator(
     # logger.info("reading parameter to Memory.")
     # return ret
 
+    ret = []
     # bulk restore
-    tensor_list = []
+    tensor_list = {}
     meta = {} # name - para. shape
+    layer_num = 1 + 32 + 1
+    for i in range(layer_num):
+      tensor_list[i]=[]
+      meta[i] = {}
     logger.info("start reading parameter from Disk.")
     for st_file in hf_weights_files:
         with safe_open(st_file, framework="pt") as f:
             for name in f.keys():  # noqa: SIM118
                 param = f.get_tensor(name)
-                tensor_list.append(param.reshape(-1))
-                meta[name] = param.size()
-    bluk_tensor = torch.cat(tensor_list)
-    pinned_bluk_tensor = bluk_tensor.pin_memory()
+                if name == "transformer.wte.weight": # wte
+                  tensor_list[0].append(param.reshape(-1))
+                  meta[0][name] = param.size()
+                elif name == "lm_head.weight" or name == "transformer.ln_f.weight":
+                  tensor_list[33].append(param.reshape(-1))
+                  meta[33][name] = param.size()
+                else:
+                  index = int(name.split('.')[2]) + 1
+                  tensor_list[index].append(param.reshape(-1))
+                  meta[index][name] = param.size()
+    for i in range(layer_num):
+      bluk_tensor = torch.cat(tensor_list[i])
+      pinned_bluk_tensor = bluk_tensor.pin_memory()
+      ret.append((pinned_bluk_tensor, meta[i]))
     logger.info("reading parameter to Memory.")
-    return pinned_bluk_tensor, meta
+    return ret
 
 
 def pt_weights_iterator(

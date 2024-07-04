@@ -11,14 +11,19 @@ from vllm.model_executor.model_loader.utils import (
     get_architecture_class_name, get_model_architecture)
 
 loader=None
+def read_weight(model_config: ModelConfig, load_config: LoadConfig) -> None:
+    global loader
+    loader = get_model_loader(load_config)
+    loader.weight = loader._get_weights_iterator(model_config.model,
+                                                 model_config.revision,
+                                                 True)
+
 def get_model(*, model_config: ModelConfig, load_config: LoadConfig,
               device_config: DeviceConfig, parallel_config: ParallelConfig,
               scheduler_config: SchedulerConfig,
               lora_config: Optional[LoRAConfig],
               vision_language_config: Optional[VisionLanguageConfig],
               cache_config: CacheConfig) -> nn.Module:
-    global loader
-    loader = get_model_loader(load_config)
     return loader.init_model(model_config=model_config,
                              device_config=device_config,
                              lora_config=lora_config,

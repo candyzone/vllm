@@ -211,6 +211,9 @@ class LLMEngine:
         self.decoding_config = decoding_config or DecodingConfig()
         self.log_stats = log_stats
 
+        from vllm.model_executor.model_loader import read_weight
+        read_weight(self.model_config, self.load_config)
+
         if not self.model_config.skip_tokenizer_init:
             self.tokenizer = self._init_tokenizer()
             self.detokenizer = Detokenizer(self.tokenizer)
@@ -237,7 +240,10 @@ class LLMEngine:
         if not self.model_config.embedding_mode:
             self._initialize_kv_caches()
 
-        self.model_executor.driver_worker.model_runner.load_weight()
+        self.model_executor.driver_worker.model_runner.init_model()
+        import threading
+        self.t = threading.Thread(target = self.model_executor.driver_worker.model_runner.load_weight)
+        self.t.start()
 
         # If usage stat is enabled, collect relevant info.
         if is_usage_stats_enabled():

@@ -296,6 +296,10 @@ class VocabParallelEmbedding(torch.nn.Module):
         param[loaded_weight.shape[0]:].data.fill_(0)
 
     def forward(self, input_):
+        while not getattr(self.weight, 'is_initialized', False):
+            # not initialized
+            import time
+            time.sleep(1/1000.0)
         if self.tp_size > 1:
             # Build the mask.
             masked_input, input_mask = get_masked_input_and_mask(
