@@ -392,10 +392,12 @@ def safetensors_weights_iterator(
         with safe_open(st_file, framework="pt") as f:
             for name in f.keys():  # noqa: SIM118
                 param = f.get_tensor(name)
-                if name == "transformer.wte.weight": # wte
+                #if name == "transformer.wte.weight": # wte
+                if name == "model.embed_tokens.weight": # wte
                   tensor_list[0].append(param.reshape(-1))
                   meta[0][name] = param.size()
-                elif name == "lm_head.weight" or name == "transformer.ln_f.weight":
+                #elif name == "lm_head.weight" or name == "transformer.ln_f.weight":
+                elif name == "lm_head.weight" or name == "model.norm.weight":
                   tensor_list[33].append(param.reshape(-1))
                   meta[33][name] = param.size()
                 else:

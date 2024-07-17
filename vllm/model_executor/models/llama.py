@@ -297,6 +297,9 @@ class LlamaModel(nn.Module):
 
 
 class LlamaForCausalLM(nn.Module):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    stream1 = torch.cuda.Stream(device=device)
+
     packed_modules_mapping = {
         "qkv_proj": [
             "q_proj",
@@ -386,7 +389,7 @@ class LlamaForCausalLM(nn.Module):
         next_tokens = self.sampler(logits, sampling_metadata)
         return next_tokens
 
-    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
+    def load_weights(self, weights_and_meta: Tuple[torch.Tensor, Dict[str, torch.Size]]):
         stacked_params_mapping = [
             # (param_name, shard_name, shard_id)
             (".qkv_proj", ".q_proj", "q"),
@@ -396,7 +399,26 @@ class LlamaForCausalLM(nn.Module):
             (".gate_up_proj", ".up_proj", 1),
         ]
         params_dict = dict(self.named_parameters())
-        for name, loaded_weight in weights:
+
+        # xx
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        cat_weights = torch.empty_like(weights_and_meta[0], device=device)
+        with torch.cuda.stream(LlamaForCausalLM.stream1):
+          cat_weights.data.copy_(weights_and_meta[0])
+
+        shapes = []
+        names = []
+        numel = []
+        for name in weights_and_meta[1]:
+            size = weights_and_meta[1][name]
+            numel.append(size.numel())
+            names.append(name)
+            shapes.append(size)
+        weights = cat_weights.split(numel)
+        for name, shape, loaded_weight in zip(names, shapes, weights):
+            loaded_weight = loaded_weight.reshape(shape)
+
+        #for name, loaded_weight in weights:
             if "rotary_emb.inv_freq" in name:
                 continue
             if ("rotary_emb.cos_cached" in name
@@ -414,6 +436,7 @@ class LlamaForCausalLM(nn.Module):
                 param = params_dict[name]
                 weight_loader = param.weight_loader
                 weight_loader(param, loaded_weight, shard_id)
+                param.is_initialized = True
                 break
             else:
                 # Skip loading extra bias for GPTQ models.
@@ -436,6 +459,7 @@ class LlamaForCausalLM(nn.Module):
                 weight_loader = getattr(param, "weight_loader",
                                         default_weight_loader)
                 weight_loader(param, loaded_weight)
+                param.is_initialized = True
 
     # If this function is called, it should always initialize KV cache scale
     # factors (or else raise an exception). Thus, handled exceptions should
