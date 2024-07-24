@@ -21,8 +21,15 @@ class GPUExecutor(ExecutorBase):
 
         self.driver_worker = self._create_worker()
         self.driver_worker.init_device()
-        # self.driver_worker.load_model()
+        from vllm.model_executor.model_loader import read_weight
+        read_weight(self.model_config, self.load_config)
         self.driver_worker.model_runner.init_model()
+
+    def read_and_load_weight(self):
+        self.driver_worker.model_runner.set_param_uninitialized()
+        import threading
+        self.t = threading.Thread(target = self.driver_worker.model_runner.load_weight)
+        self.t.start()
 
     def _get_worker_kwargs(
             self,

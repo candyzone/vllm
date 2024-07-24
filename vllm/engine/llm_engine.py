@@ -237,12 +237,7 @@ class LLMEngine:
         if not self.model_config.embedding_mode:
             self._initialize_kv_caches()
 
-        #self.model_executor.driver_worker.model_runner.set_param_uninitialized()
-        self.model_executor._run_workers("set_param_uninitialized")
-        import threading
-        #self.t = threading.Thread(target = self.model_executor.driver_worker.model_runner.load_weight)
-        self.t = threading.Thread(target = self.model_executor._run_workers("load_weight"))
-        self.t.start()
+        self.model_executor.read_and_load_weight()
 
         # If usage stat is enabled, collect relevant info.
         if is_usage_stats_enabled():
