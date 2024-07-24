@@ -63,9 +63,8 @@ class MultiprocessingGPUExecutor(DistributedGPUExecutor):
         self.driver_worker = self._create_worker(
             distributed_init_method=distributed_init_method)
         self._run_workers("init_device")
-        self._run_workers("load_model",
-                          max_concurrent_workers=self.parallel_config.
-                          max_parallel_loading_workers)
+        self._run_workers("read_weight")
+        self._run_workers("init_model")
 
     def shutdown(self):
         if (worker_monitor := getattr(self, "worker_monitor",

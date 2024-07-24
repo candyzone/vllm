@@ -117,10 +117,24 @@ class Worker(WorkerBase):
         # Set random seed.
         set_random_seed(self.model_config.seed)
 
+    def read_weight(self):
+        from vllm.model_executor.model_loader import read_weight
+        print("======= vllm.model_executor.model_loader::read_weight")
+        read_weight(self.model_config, self.load_config)
+
+    def init_model(self):
+        self.model_runner.init_model()
+
     from vllm.spec_decode.util import nvtx_range
     @nvtx_range("Worker.load_model")
     def load_model(self):
         self.model_runner.load_model()
+
+    def load_weight(self):
+        self.model_runner.load_weight()
+
+    def set_param_uninitialized(self):
+        self.model_runner.set_param_uninitialized()
 
     def save_sharded_state(
         self,
