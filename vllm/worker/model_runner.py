@@ -286,6 +286,10 @@ class ModelRunner:
             cache_config=self.cache_config,
         )
 
+    def set_param_uninitialized(self) -> None:
+        for _, para in self.model.named_parameters():
+            para.is_initialized = False
+        print("set_param_uninitialized done!!!")
 
     def save_sharded_state(
         self,

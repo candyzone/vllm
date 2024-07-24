@@ -240,7 +240,7 @@ class LLMEngine:
         if not self.model_config.embedding_mode:
             self._initialize_kv_caches()
 
-        self.model_executor.driver_worker.model_runner.init_model()
+        self.model_executor.driver_worker.model_runner.set_param_uninitialized()
         import threading
         self.t = threading.Thread(target = self.model_executor.driver_worker.model_runner.load_weight)
         self.t.start()
