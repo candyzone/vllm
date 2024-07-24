@@ -108,6 +108,7 @@ class WorkerMonitor(threading.Thread):
     def run(self) -> None:
         # Blocks until any worker exits
         dead_sentinels = wait([w.process.sentinel for w in self.workers])
+        exit(0)
         if not self._close:
             self._close = True
 
