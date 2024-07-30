@@ -9,9 +9,6 @@ from vllm.distributed import (divide, get_tensor_model_parallel_rank,
                               get_tensor_model_parallel_world_size,
                               tensor_model_parallel_all_reduce)
 from vllm.model_executor.utils import set_weight_attrs
-from vllm.logger import init_logger
-
-logger = init_logger(__name__)
 
 DEFAULT_VOCAB_PADDING_SIZE = 64
 
@@ -291,7 +288,6 @@ class VocabParallelEmbedding(torch.nn.Module):
         return ret
 
     def weight_loader(self, param: Parameter, loaded_weight: torch.Tensor):
-        logger.info("vocabulary para: {} - {}".format(param, param.data.device))
         parallel_dim = param.parallel_dim
         assert loaded_weight.shape[parallel_dim] == self.org_vocab_size
         loaded_weight = loaded_weight[self.shard_indices.org_vocab_start_index:

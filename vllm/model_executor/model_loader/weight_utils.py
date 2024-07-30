@@ -391,8 +391,8 @@ def safetensors_weights_iterator(
     for st_file in hf_weights_files:
         with safe_open(st_file, framework="pt") as f:
             for name in f.keys():  # noqa: SIM118
+                #print('param.name:', name)
                 param = f.get_tensor(name)
-                logger.info('param.name: {} - {}'.format(name, param.shape))
                 if name == "transformer.wte.weight" or name == "model.embed_tokens.weight": # wte
                   tensor_list[0].append(param.reshape(-1))
                   meta[0][name] = param.size()
