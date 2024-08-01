@@ -131,7 +131,9 @@ class Worker(WorkerBase):
         self.model_runner.load_model()
 
     def load_weight(self):
-        self.model_runner.load_weight()
+        import threading
+        self.t = threading.Thread(target = self.model_runner.load_weight)
+        self.t.start()
 
     def set_param_uninitialized(self):
         self.model_runner.set_param_uninitialized()

@@ -68,9 +68,7 @@ class MultiprocessingGPUExecutor(DistributedGPUExecutor):
 
     def read_and_load_weight(self):
         self._run_workers("set_param_uninitialized")
-        import threading
-        self.t = threading.Thread(target = self._run_workers("load_weight"))
-        self.t.start()
+        self._run_workers("load_weight")
 
     def shutdown(self):
         if (worker_monitor := getattr(self, "worker_monitor",
